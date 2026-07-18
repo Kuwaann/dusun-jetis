@@ -1,11 +1,11 @@
+import { User } from "lucide-react";
+
 export default function Profil() {
   return (
     <section className="section welcome reveal" id="profil">
       <div className="welcome-media">
         <div className="image-placeholder">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
+          <User size={24} />
           [Placeholder Foto Kepala Wilayah]
         </div>
       </div>

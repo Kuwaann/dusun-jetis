@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Newspaper, ArrowRightCircle } from "lucide-react";
 
 export default function BeritaList() {
   const articles = [
@@ -46,9 +47,7 @@ export default function BeritaList() {
           <div className="berita-item-image">
             <Link href={`/berita/${item.id}`}>
               <div className="image-placeholder">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M9 12h6m-6 3h6" />
-                </svg>
+                <Newspaper size={24} />
                 [Placeholder Foto]
               </div>
             </Link>
@@ -62,10 +61,7 @@ export default function BeritaList() {
             <p className="berita-item-excerpt">{item.excerpt}</p>
             <Link href={`/berita/${item.id}`} className="berita-item-link">
               <span>Baca Selengkapnya</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6"/>
-                <path d="M10 8l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ArrowRightCircle size={14} strokeWidth={1.6} />
             </Link>
           </div>
         </article>

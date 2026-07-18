@@ -1,11 +1,11 @@
+import { User, Users, Globe } from "lucide-react";
+
 export default function ProfilInfoCards() {
   return (
     <div className="info-card-list section reveal">
       <article className="info-card">
         <div className="info-card-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 13c-3.314 0-6 2.015-6 4.5V19h12v-1.5c0-2.485-2.686-4.5-6-4.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <User size={20} strokeWidth={1.8} />
           <h3>Identitas Wilayah</h3>
         </div>
         <div className="info-card-body">
@@ -20,9 +20,7 @@ export default function ProfilInfoCards() {
 
       <article className="info-card">
         <div className="info-card-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <Users size={20} strokeWidth={1.8} />
           <h3>Kondisi Umum</h3>
         </div>
         <div className="info-card-body">
@@ -37,9 +35,7 @@ export default function ProfilInfoCards() {
 
       <article className="info-card">
         <div className="info-card-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <Globe size={20} strokeWidth={1.8} />
           <h3>Potensi Lokal</h3>
         </div>
         <div className="info-card-body">

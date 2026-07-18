@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Newspaper } from "lucide-react";
 
 export default function BeritaDetailPage() {
   useEffect(() => {
@@ -53,9 +54,7 @@ export default function BeritaDetailPage() {
           {/* Hero Image */}
           <div className="berita-detail-hero">
             <div className="image-placeholder">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M9 12h6m-6 3h6" />
-              </svg>
+              <Newspaper size={24} />
               [Placeholder Foto Utama Artikel Berita]
             </div>
           </div>

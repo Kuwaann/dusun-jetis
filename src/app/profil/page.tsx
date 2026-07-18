@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import ProfilQuoteBanner from "@/components/ProfilQuoteBanner";
 import ProfilInfoCards from "@/components/ProfilInfoCards";
 import ProfilVisiMisi from "@/components/ProfilVisiMisi";
-import KontakMap from "@/components/KontakMap";
+import PetaLokasi from "@/components/PetaLokasi";
 import ProfilKepengurusan from "@/components/ProfilKepengurusan";
 import Footer from "@/components/Footer";
 
@@ -58,7 +58,7 @@ export default function ProfilPage() {
         <ProfilVisiMisi />
 
         {/* Peta Lokasi */}
-        <KontakMap />
+        <PetaLokasi />
 
         {/* Struktur Kepengurusan */}
         <ProfilKepengurusan />
