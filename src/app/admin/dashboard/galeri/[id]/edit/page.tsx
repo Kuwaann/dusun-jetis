@@ -28,34 +28,33 @@ export default function EditGaleriPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    const fetchGaleri = async () => {
+      const { data, error } = await supabase
+        .from("galeri")
+        .select("*")
+        .eq("id", params.id)
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+        toast.error("Gagal memuat data foto galeri.");
+        router.push("/admin/dashboard/galeri");
+      } else {
+        setFormData({
+          caption: data.title || "",
+          alt_text: "",
+          status: "published",
+          image_url: data.image_url || "",
+        });
+        setPreview(data.image_url);
+      }
+      setIsFetching(false);
+    };
+
     if (params.id) {
       fetchGaleri();
     }
-  }, [params.id]);
-
-  const fetchGaleri = async () => {
-    setIsFetching(true);
-    const { data, error } = await supabase
-      .from("galeri")
-      .select("*")
-      .eq("id", params.id)
-      .single();
-
-    if (error || !data) {
-      console.error(error);
-      toast.error("Gagal memuat data foto galeri.");
-      router.push("/admin/dashboard/galeri");
-    } else {
-      setFormData({
-        caption: data.title || "",
-        alt_text: "",
-        status: "published",
-        image_url: data.image_url || "",
-      });
-      setPreview(data.image_url);
-    }
-    setIsFetching(false);
-  };
+  }, [params.id, router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent, status: "published" | "draft" | null = null) => {
     e.preventDefault();

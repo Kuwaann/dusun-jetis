@@ -27,33 +27,31 @@ export default function EditAkunPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", params.id)
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+        toast.error("Gagal memuat profil pengguna.");
+        router.push("/admin/dashboard/akun");
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          full_name: data.full_name || "",
+          role: data.role || "editor",
+        }));
+      }
+      setIsFetching(false);
+    };
+
     if (params.id) {
       fetchProfile();
     }
-  }, [params.id]);
-
-  const fetchProfile = async () => {
-    setIsFetching(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", params.id)
-      .single();
-
-    if (error || !data) {
-      console.error(error);
-      toast.error("Gagal memuat profil pengguna.");
-      router.push("/admin/dashboard/akun");
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        full_name: data.full_name || "",
-        role: data.role || "editor",
-        // Email tidak langsung tersedia di public profiles
-      }));
-    }
-    setIsFetching(false);
-  };
+  }, [params.id, router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { List, Link as LinkIcon } from "lucide-react";
+import { List } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, deleteImage } from "@/lib/supabase/storage";
 import { logActivity } from "@/lib/supabase/logger";
@@ -22,41 +22,40 @@ export default function EditBeritaPage() {
     status: "",
     image_url: "",
   });
-  
+
   const [initialContent, setInitialContent] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
+    const fetchBerita = async () => {
+      const { data, error } = await supabase
+        .from("berita")
+        .select("*")
+        .eq("id", params.id)
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+        toast.error("Gagal memuat data berita.");
+        router.push("/admin/dashboard/berita");
+      } else {
+        setFormData({
+          title: data.title,
+          published_at: data.published_at ? data.published_at.split('T')[0] : "",
+          status: data.status,
+          image_url: data.image_url || "",
+        });
+        setInitialContent(data.content || "");
+      }
+      setIsFetching(false);
+    };
+
     if (params.id) {
       fetchBerita();
     }
-  }, [params.id]);
-
-  const fetchBerita = async () => {
-    setIsFetching(true);
-    const { data, error } = await supabase
-      .from("berita")
-      .select("*")
-      .eq("id", params.id)
-      .single();
-
-    if (error || !data) {
-      console.error(error);
-      toast.error("Gagal memuat data berita.");
-      router.push("/admin/dashboard/berita");
-    } else {
-      setFormData({
-        title: data.title,
-        published_at: data.published_at ? data.published_at.split('T')[0] : "",
-        status: data.status,
-        image_url: data.image_url || "",
-      });
-      setInitialContent(data.content || "");
-    }
-    setIsFetching(false);
-  };
+  }, [params.id, router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent, status: "published" | "draft" | null = null) => {
     e.preventDefault();
@@ -105,9 +104,9 @@ export default function EditBeritaPage() {
       toast.success("Berita berhasil diperbarui!");
       router.push("/admin/dashboard/berita");
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      toast.error("Gagal memperbarui berita: " + err.message);
+      toast.error("Gagal memperbarui berita: " + (err instanceof Error ? err.message : "Terjadi kesalahan"));
     } finally {
       setIsLoading(false);
     }
@@ -137,112 +136,112 @@ export default function EditBeritaPage() {
           Memuat data Berita...
         </div>
       ) : (
-      <form onSubmit={(e) => handleSubmit(e)} className="admin-panel-card" style={{ padding: "32px" }}>
-        <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid var(--line)" }}>
-          Informasi Artikel
-        </h2>
+        <form onSubmit={(e) => handleSubmit(e)} className="admin-panel-card" style={{ padding: "32px" }}>
+          <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid var(--line)" }}>
+            Informasi Artikel
+          </h2>
 
-        <div className="admin-form-group">
-          <label className="admin-label" htmlFor="judul">Judul Berita *</label>
-          <input 
-            type="text" 
-            id="judul" 
-            className="admin-input" 
-            value={formData.title} 
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })} 
-            required 
-          />
-        </div>
-
-        <div className="admin-form-grid">
           <div className="admin-form-group">
-            <label className="admin-label" htmlFor="tanggal">Tanggal Publikasi</label>
-            <input 
-              type="date" 
-              id="tanggal" 
-              className="admin-input" 
-              value={formData.published_at} 
-              onChange={(e) => setFormData({ ...formData, published_at: e.target.value })} 
+            <label className="admin-label" htmlFor="judul">Judul Berita *</label>
+            <input
+              type="text"
+              id="judul"
+              className="admin-input"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
             />
           </div>
 
+          <div className="admin-form-grid">
+            <div className="admin-form-group">
+              <label className="admin-label" htmlFor="tanggal">Tanggal Publikasi</label>
+              <input
+                type="date"
+                id="tanggal"
+                className="admin-input"
+                value={formData.published_at}
+                onChange={(e) => setFormData({ ...formData, published_at: e.target.value })}
+              />
+            </div>
+
+            <div className="admin-form-group">
+              <label className="admin-label" htmlFor="foto">Ganti Foto Utama (Biarkan kosong jika tidak diubah)</label>
+              <input
+                type="file"
+                id="foto"
+                className="admin-input"
+                accept="image/*"
+                style={{ padding: "10px 16px" }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setImageFile(e.target.files[0]);
+                  }
+                }}
+              />
+              {formData.image_url && (
+                <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--muted)" }}>
+                  Foto saat ini sudah tersimpan. Unggah foto baru untuk menggantinya.
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="admin-form-group">
-            <label className="admin-label" htmlFor="foto">Ganti Foto Utama (Biarkan kosong jika tidak diubah)</label>
-            <input 
-              type="file" 
-              id="foto" 
-              className="admin-input" 
-              accept="image/*" 
-              style={{ padding: "10px 16px" }} 
-              onChange={(e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                  setImageFile(e.target.files[0]);
-                }
-              }}
-            />
-            {formData.image_url && (
-              <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--muted)" }}>
-                Foto saat ini sudah tersimpan. Unggah foto baru untuk menggantinya.
+            <label className="admin-label" htmlFor="konten">Isi Berita *</label>
+
+            <div className="admin-rte-container">
+              <div className="admin-rte-toolbar">
+                <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('bold')} title="Bold">
+                  <strong>B</strong>
+                </button>
+                <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('italic')} title="Italic">
+                  <em>I</em>
+                </button>
+                <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('underline')} title="Underline">
+                  <u>U</u>
+                </button>
+                <div style={{ width: "1px", background: "var(--line)", margin: "4px 8px" }}></div>
+                <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('insertUnorderedList')} title="Bullet List">
+                  <List size={18} strokeWidth={2} />
+                </button>
               </div>
-            )}
-          </div>
-        </div>
 
-        <div className="admin-form-group">
-          <label className="admin-label" htmlFor="konten">Isi Berita *</label>
-          
-          <div className="admin-rte-container">
-            <div className="admin-rte-toolbar">
-              <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('bold')} title="Bold">
-                <strong>B</strong>
-              </button>
-              <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('italic')} title="Italic">
-                <em>I</em>
-              </button>
-              <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('underline')} title="Underline">
-                <u>U</u>
-              </button>
-              <div style={{ width: "1px", background: "var(--line)", margin: "4px 8px" }}></div>
-              <button type="button" className="admin-rte-btn" onClick={() => toggleFormat('insertUnorderedList')} title="Bullet List">
-                <List size={18} strokeWidth={2} />
-              </button>
+              {/* The editable area */}
+              <div
+                ref={contentRef}
+                className="admin-rte-editor"
+                contentEditable={true}
+                suppressContentEditableWarning={true}
+                dangerouslySetInnerHTML={{ __html: initialContent }}
+              >
+              </div>
             </div>
-            
-            {/* The editable area */}
-            <div 
-              ref={contentRef}
-              className="admin-rte-editor" 
-              contentEditable={true} 
-              suppressContentEditableWarning={true}
-              dangerouslySetInnerHTML={{ __html: initialContent }}
+          </div>
+
+          <div className="admin-form-actions">
+            <Link href="/admin/dashboard/berita" className="admin-btn-secondary">
+              Batal
+            </Link>
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              onClick={(e) => handleSubmit(e, "draft")}
+              disabled={isLoading}
             >
-            </div>
+              Ubah jadi Draf
+            </button>
+            <button
+              type="submit"
+              className="admin-btn-primary"
+              onClick={(e) => handleSubmit(e, "published")}
+              disabled={isLoading}
+              style={{ opacity: isLoading ? 0.7 : 1 }}
+            >
+              {isLoading ? "Menyimpan..." : "Perbarui Publikasi"}
+            </button>
           </div>
-        </div>
-
-        <div className="admin-form-actions">
-          <Link href="/admin/dashboard/berita" className="admin-btn-secondary">
-            Batal
-          </Link>
-          <button 
-            type="button" 
-            className="admin-btn-secondary"
-            onClick={(e) => handleSubmit(e, "draft")}
-            disabled={isLoading}
-          >
-            Ubah jadi Draf
-          </button>
-          <button 
-            type="submit" 
-            className="admin-btn-primary" 
-            onClick={(e) => handleSubmit(e, "published")}
-            disabled={isLoading}
-            style={{ opacity: isLoading ? 0.7 : 1 }}
-          >
-            {isLoading ? "Menyimpan..." : "Perbarui Publikasi"}
-          </button>
-        </div>
-      </form>
+        </form>
       )}
     </div>
   );

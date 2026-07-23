@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { List, Link as LinkIcon } from "lucide-react";
+import { List } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/supabase/storage";
 import { logActivity } from "@/lib/supabase/logger";
@@ -19,7 +20,7 @@ export default function CreateBeritaPage() {
     published_at: new Date().toISOString().split('T')[0],
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   const supabase = createClient();
 
@@ -27,10 +28,7 @@ export default function CreateBeritaPage() {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
     });
-  }, []);
-  const [activeFormat, setActiveFormat] = useState({
-    bold: false, italic: false, underline: false, list: false
-  });
+  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent, status: "published" | "draft" = "published") => {
     e.preventDefault();
@@ -103,9 +101,9 @@ export default function CreateBeritaPage() {
       toast.success("Berita berhasil disimpan!");
       router.push("/admin/dashboard/berita");
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error("Gagal menyimpan berita: " + error.message);
+      toast.error("Gagal menyimpan berita: " + (error instanceof Error ? error.message : "Terjadi kesalahan"));
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +200,7 @@ export default function CreateBeritaPage() {
               ref={contentRef}
               className="admin-rte-editor" 
               contentEditable={true} 
-              placeholder="Mulai menulis berita di sini..."
+              data-placeholder="Mulai menulis berita di sini..."
             ></div>
           </div>
           <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "8px" }}>

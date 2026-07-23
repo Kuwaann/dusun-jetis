@@ -31,38 +31,37 @@ export default function EditUmkmPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    const fetchUmkm = async () => {
+      const { data, error } = await supabase
+        .from("umkm")
+        .select("*")
+        .eq("id", params.id)
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+        toast.error("Gagal memuat data UMKM atau data tidak ditemukan.");
+        router.push("/admin/dashboard/umkm");
+      } else {
+        setFormData({
+          name: data.name,
+          owner: data.owner || "",
+          category: data.category,
+          description: data.description || "",
+          whatsapp_number: data.whatsapp_number,
+          address: data.address,
+          maps_link: data.maps_link || "",
+          linktree_link: data.linktree_link || "",
+          image_url: data.image_url || "",
+        });
+      }
+      setIsFetching(false);
+    };
+
     if (params.id) {
       fetchUmkm();
     }
-  }, [params.id]);
-
-  const fetchUmkm = async () => {
-    setIsFetching(true);
-    const { data, error } = await supabase
-      .from("umkm")
-      .select("*")
-      .eq("id", params.id)
-      .single();
-
-    if (error || !data) {
-      console.error(error);
-      toast.error("Gagal memuat data UMKM atau data tidak ditemukan.");
-      router.push("/admin/dashboard/umkm");
-    } else {
-      setFormData({
-        name: data.name,
-        owner: data.owner || "",
-        category: data.category,
-        description: data.description || "",
-        whatsapp_number: data.whatsapp_number,
-        address: data.address,
-        maps_link: data.maps_link || "",
-        linktree_link: data.linktree_link || "",
-        image_url: data.image_url || "",
-      });
-    }
-    setIsFetching(false);
-  };
+  }, [params.id, router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
