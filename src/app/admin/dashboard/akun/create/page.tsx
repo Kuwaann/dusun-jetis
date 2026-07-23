@@ -48,9 +48,9 @@ export default function CreateAkunPage() {
       toast.success("Akun berhasil didaftarkan!");
       router.push("/admin/dashboard/akun");
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error.message);
+      toast.error(error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
       setIsLoading(false);
     }
