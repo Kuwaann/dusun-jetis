@@ -2,17 +2,58 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
 
 export default function CreateAkunPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    full_name: "",
+    role: "editor",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Kata sandi dan konfirmasi tidak cocok!");
+      return;
+    }
+    
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          role: formData.role,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Gagal mendaftarkan akun");
+      }
+
+      await logActivity("akun", "CREATE", `Mendaftarkan akun baru: ${formData.full_name} (${formData.role})`);
+
+      toast.success("Akun berhasil didaftarkan!");
+      router.push("/admin/dashboard/akun");
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
       setIsLoading(false);
-      alert("Simulasi berhasil mendaftarkan akun baru (UI Preview).");
-    }, 1000);
+    }
   };
 
   return (
@@ -37,14 +78,28 @@ export default function CreateAkunPage() {
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="nama">Nama Lengkap *</label>
-            <input type="text" id="nama" className="admin-input" placeholder="Contoh: Budi Santoso" required />
+            <input 
+              type="text" 
+              id="nama" 
+              className="admin-input" 
+              placeholder="Contoh: Budi Santoso" 
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              required 
+            />
           </div>
 
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="peran">Peran Akses *</label>
-            <select id="peran" className="admin-input" required defaultValue="Editor">
-              <option value="Admin Utama">Admin Utama (Akses Penuh)</option>
-              <option value="Editor">Editor / Kontributor (Hanya Kelola Konten)</option>
+            <select 
+              id="peran" 
+              className="admin-input" 
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              required
+            >
+              <option value="admin">Admin Utama (Akses Penuh)</option>
+              <option value="editor">Editor / Kontributor (Hanya Kelola Konten)</option>
             </select>
           </div>
         </div>
@@ -52,12 +107,15 @@ export default function CreateAkunPage() {
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="email">Alamat Email *</label>
-            <input type="email" id="email" className="admin-input" placeholder="contoh@email.com" required />
-          </div>
-
-          <div className="admin-form-group">
-            <label className="admin-label" htmlFor="username">Username *</label>
-            <input type="text" id="username" className="admin-input" placeholder="Minimal 5 karakter tanpa spasi" required />
+            <input 
+              type="email" 
+              id="email" 
+              className="admin-input" 
+              placeholder="contoh@email.com" 
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required 
+            />
           </div>
         </div>
 
@@ -71,12 +129,28 @@ export default function CreateAkunPage() {
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="password">Kata Sandi Baru *</label>
-            <input type="password" id="password" className="admin-input" placeholder="Minimal 8 karakter" required />
+            <input 
+              type="password" 
+              id="password" 
+              className="admin-input" 
+              placeholder="Minimal 6 karakter" 
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required 
+            />
           </div>
 
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="confirmPassword">Konfirmasi Kata Sandi *</label>
-            <input type="password" id="confirmPassword" className="admin-input" placeholder="Ketik ulang kata sandi" required />
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              className="admin-input" 
+              placeholder="Ketik ulang kata sandi" 
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              required 
+            />
           </div>
         </div>
 

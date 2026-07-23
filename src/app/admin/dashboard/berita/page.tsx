@@ -1,18 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { deleteImage } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
+
+interface Berita {
+  id: number;
+  title: string;
+  status: string;
+  published_at: string;
+  image_url?: string;
+  profiles: {
+    full_name: string;
+  };
+}
 
 export default function BeritaListPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedBerita, setSelectedBerita] = useState<number | null>(null);
+  const [selectedBerita, setSelectedBerita] = useState<Berita | null>(null);
+  const [beritaList, setBeritaList] = useState<Berita[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const dummyBerita = [
-    { id: 1, judul: "Kerja Bakti Minggu Pagi Bersama Warga", tanggal: "15 Juli 2026", penulis: "Admin Utama", status: "Dipublikasikan" },
-    { id: 2, judul: "Penyuluhan Kesehatan di Balai Dusun", tanggal: "10 Juli 2026", penulis: "Admin Desa", status: "Dipublikasikan" },
-    { id: 3, judul: "Jadwal Ronda Malam Bulan Agustus", tanggal: "05 Juli 2026", penulis: "Admin Desa", status: "Draf" },
-  ];
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchBerita();
+  }, []);
+
+  const fetchBerita = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("berita")
+      .select(`
+        id, 
+        title, 
+        status, 
+        published_at, 
+        image_url,
+        profiles (full_name)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setBeritaList(data as any);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedBerita) return;
+    
+    setIsDeleting(true);
+    try {
+      // Hapus foto dari storage jika ada
+      if (selectedBerita.image_url) {
+        await deleteImage(selectedBerita.image_url);
+      }
+
+      // Hapus data dari tabel
+      const { error } = await supabase
+        .from("berita")
+        .delete()
+        .eq("id", selectedBerita.id);
+
+      if (error) throw error;
+
+      // Catat log
+      await logActivity("berita", "DELETE", `Menghapus berita: ${selectedBerita.title}`);
+      
+      // Refresh list
+      fetchBerita();
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      console.error("Gagal menghapus Berita:", err);
+      toast.error("Gagal menghapus Berita.");
+    } finally {
+      setIsDeleting(false);
+      setSelectedBerita(null);
+    }
+  };
 
   return (
     <div>
@@ -41,37 +112,47 @@ export default function BeritaListPage() {
             </tr>
           </thead>
           <tbody>
-            {dummyBerita.map((berita) => (
-              <tr key={berita.id}>
-                <td style={{ fontWeight: 500, maxWidth: "250px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {berita.judul}
-                </td>
-                <td>{berita.tanggal}</td>
-                <td>{berita.penulis}</td>
-                <td>
-                  <span style={{ 
-                    padding: "4px 8px", 
-                    background: berita.status === "Dipublikasikan" ? "#e8f5e9" : "#fff3e0", 
-                    color: berita.status === "Dipublikasikan" ? "#2e7d32" : "#e65100", 
-                    borderRadius: "4px", fontSize: "12px", fontWeight: 500 
-                  }}>
-                    {berita.status}
-                  </span>
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <Link href={`/admin/dashboard/berita/${berita.id}/edit`} className="admin-btn-edit">Edit</Link>
-                  <button 
-                    className="admin-btn-danger"
-                    onClick={() => {
-                      setSelectedBerita(berita.id);
-                      setIsDeleteModalOpen(true);
-                    }}
-                  >
-                    Hapus
-                  </button>
-                </td>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "32px" }}>Memuat data Berita...</td>
               </tr>
-            ))}
+            ) : beritaList.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "var(--muted)" }}>Belum ada data Berita.</td>
+              </tr>
+            ) : (
+              beritaList.map((berita) => (
+                <tr key={berita.id}>
+                  <td style={{ fontWeight: 500, maxWidth: "250px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {berita.title}
+                  </td>
+                  <td>{berita.published_at ? new Date(berita.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td>
+                  <td>{berita.profiles?.full_name || 'Admin'}</td>
+                  <td>
+                    <span style={{ 
+                      padding: "4px 8px", 
+                      background: berita.status === "published" ? "#e8f5e9" : "#fff3e0", 
+                      color: berita.status === "published" ? "#2e7d32" : "#e65100", 
+                      borderRadius: "4px", fontSize: "12px", fontWeight: 500 
+                    }}>
+                      {berita.status === "published" ? "Dipublikasikan" : "Draf"}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <Link href={`/admin/dashboard/berita/${berita.id}/edit`} className="admin-btn-edit">Edit</Link>
+                    <button 
+                      className="admin-btn-danger"
+                      onClick={() => {
+                        setSelectedBerita(berita);
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -96,18 +177,17 @@ export default function BeritaListPage() {
               <button 
                 className="admin-btn-secondary"
                 onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
               >
                 Batal
               </button>
               <button 
                 className="admin-btn-danger"
-                style={{ padding: "10px 20px", fontSize: "13px" }}
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  alert(`Simulasi: Berita dengan ID ${selectedBerita} berhasil dihapus.`);
-                }}
+                style={{ padding: "10px 20px", fontSize: "13px", opacity: isDeleting ? 0.7 : 1 }}
+                onClick={handleDelete}
+                disabled={isDeleting}
               >
-                Ya, Hapus
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
               </button>
             </div>
           </div>

@@ -1,20 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+interface Log {
+  id: number;
+  created_at: string;
+  module: string;
+  action: string;
+  description: string;
+  user_id: string;
+  pengguna?: string;
+}
 
 export default function LogAktivitasPage() {
   const [filterModul, setFilterModul] = useState("Semua");
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const dummyLogs = [
-    { id: 1, waktu: "18 Jul 2026, 08:30", pengguna: "Budi Santoso", aksi: "Menambahkan Akun Baru", detail: "Akun: agus_staf", modul: "Akun", tipe: "CREATE" },
-    { id: 2, waktu: "18 Jul 2026, 08:15", pengguna: "Siti Rahmawati", aksi: "Memperbarui UMKM", detail: "UMKM ID: 15 (Warung Sate Bu Pon)", modul: "UMKM", tipe: "UPDATE" },
-    { id: 3, waktu: "17 Jul 2026, 16:45", pengguna: "Budi Santoso", aksi: "Menghapus Berita", detail: "Berita ID: 3 (Jadwal Ronda)", modul: "Berita", tipe: "DELETE" },
-    { id: 4, waktu: "17 Jul 2026, 14:20", pengguna: "Siti Rahmawati", aksi: "Menambahkan Foto Galeri", detail: "Foto ID: 42", modul: "Galeri", tipe: "CREATE" },
-    { id: 5, waktu: "17 Jul 2026, 09:00", pengguna: "Budi Santoso", aksi: "Login ke Sistem", detail: "IP: 192.168.1.5", modul: "Sistem", tipe: "INFO" },
-    { id: 6, waktu: "16 Jul 2026, 13:10", pengguna: "Siti Rahmawati", aksi: "Memperbarui Profil", detail: "Mengubah alamat email", modul: "Akun", tipe: "UPDATE" },
-  ];
+  const supabase = createClient();
 
-  const filteredLogs = filterModul === "Semua" ? dummyLogs : dummyLogs.filter(log => log.modul === filterModul);
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const fetchLogs = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Fetch logs
+      const { data: logsData, error: logsError } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100); // Limit to latest 100 for performance
+
+      if (logsError) throw logsError;
+
+      // 2. Fetch profiles for names
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name");
+      
+      if (profilesError) throw profilesError;
+
+      const profileMap: Record<string, string> = {};
+      profilesData?.forEach((p) => {
+        profileMap[p.id] = p.full_name;
+      });
+
+      // 3. Map logs with names
+      const formattedLogs = logsData?.map(log => ({
+        ...log,
+        pengguna: profileMap[log.user_id] || "Sistem / User Terhapus",
+        waktu: new Date(log.created_at).toLocaleString("id-ID", {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })
+      })) as any;
+
+      setLogs(formattedLogs);
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredLogs = filterModul === "Semua" ? logs : logs.filter(log => log.module?.toLowerCase() === filterModul.toLowerCase());
 
   const getActionColor = (tipe: string) => {
     switch (tipe) {
@@ -64,9 +116,15 @@ export default function LogAktivitasPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.length > 0 ? (
-              filteredLogs.map((log) => {
-                const colors = getActionColor(log.tipe);
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "48px 0", color: "var(--muted)" }}>
+                  Memuat log aktivitas...
+                </td>
+              </tr>
+            ) : filteredLogs.length > 0 ? (
+              filteredLogs.map((log: any) => {
+                const colors = getActionColor(log.action);
                 return (
                   <tr key={log.id}>
                     <td style={{ fontSize: "13px", color: "var(--muted)" }}>{log.waktu}</td>
@@ -79,9 +137,10 @@ export default function LogAktivitasPage() {
                         fontSize: "11px", 
                         fontWeight: 600,
                         color: "var(--muted)",
-                        background: "var(--soft-white)"
+                        background: "var(--soft-white)",
+                        textTransform: "capitalize"
                       }}>
-                        {log.modul}
+                        {log.module}
                       </span>
                     </td>
                     <td>
@@ -91,10 +150,10 @@ export default function LogAktivitasPage() {
                         color: colors.color, 
                         borderRadius: "4px", fontSize: "12px", fontWeight: 600 
                       }}>
-                        {log.aksi}
+                        {log.action}
                       </span>
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: "13px" }}>{log.detail}</td>
+                    <td style={{ color: "var(--muted)", fontSize: "13px" }}>{log.description}</td>
                   </tr>
                 );
               })

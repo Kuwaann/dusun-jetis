@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Newspaper } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function BeritaDetailPage() {
+  const [berita, setBerita] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const params = useParams();
+  const router = useRouter();
+  const supabase = createClient();
   useEffect(() => {
     // Scroll reveal observer
     const revealElements = document.querySelectorAll(".reveal");
@@ -26,12 +33,58 @@ export default function BeritaDetailPage() {
       });
     }, observerOptions);
 
-    revealElements.forEach((el) => revealObserver.observe(el));
+    revealElements.forEach((el) => {
+      if (!el.classList.contains("visible")) {
+        revealObserver.observe(el);
+      }
+    });
 
     return () => {
       revealObserver.disconnect();
     };
-  }, []);
+  }, [berita]);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchBerita();
+    }
+  }, [params.id]);
+
+  const fetchBerita = async () => {
+    setIsLoading(true);
+    // Cek apakah id itu numeric atau slug
+    const isNumeric = /^\d+$/.test(params.id as string);
+    let query = supabase.from("berita").select("*").eq("status", "published");
+    
+    if (isNumeric) {
+      query = query.eq("id", params.id);
+    } else {
+      query = query.eq("slug", params.id);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error || !data) {
+      router.push("/berita");
+    } else {
+      setBerita(data);
+    }
+    setIsLoading(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white text-black font-sans flex items-center justify-center">
+        Memuat berita...
+      </div>
+    );
+  }
+
+  if (!berita) return null;
+
+  const date = berita.published_at 
+    ? new Date(berita.published_at).toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : "Tanggal tidak diketahui";
 
   return (
     <div className="min-h-screen bg-white text-black font-sans">
@@ -46,33 +99,32 @@ export default function BeritaDetailPage() {
           {/* Article Title & Date */}
           <div className="berita-detail-header">
             <h1 className="berita-detail-title">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+              {berita.title}
             </h1>
-            <div className="berita-detail-date">Selasa, 14 Juli 2026</div>
+            <div className="berita-detail-date">{date}</div>
           </div>
 
           {/* Hero Image */}
           <div className="berita-detail-hero">
-            <div className="image-placeholder">
-              <Newspaper size={24} />
-              [Placeholder Foto Utama Artikel Berita]
-            </div>
+            {berita.image_url ? (
+              <img 
+                src={berita.image_url} 
+                alt={berita.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+              />
+            ) : (
+              <div className="image-placeholder">
+                <Newspaper size={24} />
+                [Tanpa Gambar]
+              </div>
+            )}
           </div>
 
           {/* Article Content */}
-          <article className="berita-detail-body">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris.
-            </p>
-
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris.
-            </p>
-
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris.
-            </p>
-          </article>
+          <article 
+            className="berita-detail-body" 
+            dangerouslySetInnerHTML={{ __html: berita.content }}
+          />
         </section>
       </main>
       <Footer />

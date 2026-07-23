@@ -3,29 +3,73 @@
 import Link from "next/link";
 import { useState } from "react";
 import { UploadCloud } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
 
 export default function CreateGaleriPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    caption: "",
+    alt_text: "",
+  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const supabase = createClient();
+
+  const handleSubmit = async (e: React.FormEvent, status: "published" | "draft" = "published") => {
     e.preventDefault();
+    if (!imageFile) {
+      toast.error("Pilih foto terlebih dahulu!");
+      return;
+    }
+    
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      // 1. Upload image
+      const image_url = await uploadImage(imageFile, "galeri");
+
+      // 2. Insert to database
+      const { error } = await supabase
+        .from("galeri")
+        .insert({
+          image_url: image_url,
+          title: formData.caption,
+        });
+
+      if (error) throw error;
+
+      // 3. Log Activity
+      await logActivity("galeri", "CREATE", `Mengunggah foto galeri: ${formData.caption}`);
+
+      toast.success("Foto galeri berhasil disimpan!");
+      router.push("/admin/dashboard/galeri");
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Gagal menyimpan foto galeri: " + error.message);
+    } finally {
       setIsLoading(false);
-      alert("Simulasi berhasil menyimpan foto galeri (UI Preview).");
-    }, 1000);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     } else {
+      setImageFile(null);
       setPreview(null);
     }
   };
@@ -68,6 +112,7 @@ export default function CreateGaleriPage() {
                   className="admin-btn-secondary" 
                   onClick={() => {
                     setPreview(null);
+                    setImageFile(null);
                     const fileInput = document.getElementById('foto') as HTMLInputElement;
                     if (fileInput) fileInput.value = '';
                   }}
@@ -107,6 +152,8 @@ export default function CreateGaleriPage() {
             id="keterangan" 
             className="admin-input" 
             placeholder="Tuliskan keterangan singkat tentang foto ini..." 
+            value={formData.caption}
+            onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
             required 
           />
         </div>
@@ -118,6 +165,8 @@ export default function CreateGaleriPage() {
             id="alt" 
             className="admin-input" 
             placeholder="Tuliskan deskripsi foto untuk pembaca layar (SEO)..." 
+            value={formData.alt_text}
+            onChange={(e) => setFormData({ ...formData, alt_text: e.target.value })}
             required 
           />
           <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "8px" }}>
@@ -131,13 +180,16 @@ export default function CreateGaleriPage() {
           </Link>
           <button 
             type="button" 
-            className="admin-btn-secondary" 
+            className="admin-btn-secondary"
+            onClick={(e) => handleSubmit(e, "draft")}
+            disabled={isLoading}
           >
             Simpan Draf
           </button>
           <button 
-            type="submit" 
+            type="button" 
             className="admin-btn-primary" 
+            onClick={(e) => handleSubmit(e, "published")}
             disabled={isLoading}
             style={{ opacity: isLoading ? 0.7 : 1 }}
           >

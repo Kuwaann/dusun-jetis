@@ -1,18 +1,77 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { deleteImage } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
+
+interface Galeri {
+  id: number;
+  image_url: string;
+  title: string;
+}
 
 export default function GaleriListPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedGaleri, setSelectedGaleri] = useState<number | null>(null);
+  const [selectedGaleri, setSelectedGaleri] = useState<Galeri | null>(null);
+  const [galeriList, setGaleriList] = useState<Galeri[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const dummyGaleri = [
-    { id: 1, foto: "https://images.unsplash.com/photo-1544365558-35aa4afcf11f?auto=format&fit=crop&q=80&w=200&h=200", keterangan: "Gotong Royong Kebersihan Wilayah", alt: "Kegiatan Gotong Royong Warga", status: "Dipublikasikan" },
-    { id: 2, foto: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&q=80&w=200&h=200", keterangan: "Kebersamaan Warga Dusun Jetis", alt: "Kegiatan Dusun Jetis", status: "Dipublikasikan" },
-    { id: 3, foto: "https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=200&h=200", keterangan: "Kegiatan Posyandu Balita", alt: "Posyandu Dusun Jetis", status: "Draf" },
-  ];
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchGaleri();
+  }, []);
+
+  const fetchGaleri = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("galeri")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setGaleriList(data as any);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedGaleri) return;
+    
+    setIsDeleting(true);
+    try {
+      // Hapus foto dari storage jika ada
+      if (selectedGaleri.image_url) {
+        await deleteImage(selectedGaleri.image_url);
+      }
+
+      // Hapus data dari tabel
+      const { error } = await supabase
+        .from("galeri")
+        .delete()
+        .eq("id", selectedGaleri.id);
+
+      if (error) throw error;
+
+      // Catat log
+      await logActivity("galeri", "DELETE", `Menghapus foto galeri: ${selectedGaleri.title || selectedGaleri.id}`);
+      
+      // Refresh list
+      fetchGaleri();
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      console.error("Gagal menghapus foto:", err);
+      toast.error("Gagal menghapus foto galeri.");
+    } finally {
+      setIsDeleting(false);
+      setSelectedGaleri(null);
+    }
+  };
 
   return (
     <div>
@@ -41,41 +100,51 @@ export default function GaleriListPage() {
             </tr>
           </thead>
           <tbody>
-            {dummyGaleri.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <img 
-                    src={item.foto} 
-                    alt={item.alt} 
-                    style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--line)" }}
-                  />
-                </td>
-                <td style={{ fontWeight: 500 }}>{item.keterangan}</td>
-                <td style={{ color: "var(--muted)" }}>{item.alt}</td>
-                <td>
-                  <span style={{ 
-                    padding: "4px 8px", 
-                    background: item.status === "Dipublikasikan" ? "#e8f5e9" : "#fff3e0", 
-                    color: item.status === "Dipublikasikan" ? "#2e7d32" : "#e65100", 
-                    borderRadius: "4px", fontSize: "12px", fontWeight: 500 
-                  }}>
-                    {item.status}
-                  </span>
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <Link href={`/admin/dashboard/galeri/${item.id}/edit`} className="admin-btn-edit">Edit</Link>
-                  <button 
-                    className="admin-btn-danger"
-                    onClick={() => {
-                      setSelectedGaleri(item.id);
-                      setIsDeleteModalOpen(true);
-                    }}
-                  >
-                    Hapus
-                  </button>
-                </td>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "32px" }}>Memuat data Galeri...</td>
               </tr>
-            ))}
+            ) : galeriList.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "var(--muted)" }}>Belum ada data Galeri.</td>
+              </tr>
+            ) : (
+              galeriList.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <img 
+                      src={item.image_url || "https://placehold.co/200x200?text=No+Image"} 
+                      alt={item.title} 
+                      style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--line)" }}
+                    />
+                  </td>
+                  <td style={{ fontWeight: 500 }}>{item.title || '-'}</td>
+                  <td style={{ color: "var(--muted)" }}>{item.title || '-'}</td>
+                  <td>
+                    <span style={{ 
+                      padding: "4px 8px", 
+                      background: "#e8f5e9", 
+                      color: "#2e7d32", 
+                      borderRadius: "4px", fontSize: "12px", fontWeight: 500 
+                    }}>
+                      Dipublikasikan
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <Link href={`/admin/dashboard/galeri/${item.id}/edit`} className="admin-btn-edit">Edit</Link>
+                    <button 
+                      className="admin-btn-danger"
+                      onClick={() => {
+                        setSelectedGaleri(item);
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -100,18 +169,17 @@ export default function GaleriListPage() {
               <button 
                 className="admin-btn-secondary"
                 onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
               >
                 Batal
               </button>
               <button 
                 className="admin-btn-danger"
-                style={{ padding: "10px 20px", fontSize: "13px" }}
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  alert(`Simulasi: Foto Galeri dengan ID ${selectedGaleri} berhasil dihapus.`);
-                }}
+                style={{ padding: "10px 20px", fontSize: "13px", opacity: isDeleting ? 0.7 : 1 }}
+                onClick={handleDelete}
+                disabled={isDeleting}
               >
-                Ya, Hapus
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
               </button>
             </div>
           </div>

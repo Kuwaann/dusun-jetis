@@ -78,6 +78,29 @@ img {
   opacity: 0.6;
 }
 
+/* Empty State */
+.empty-state {
+  width: 100%;
+  padding: clamp(40px, 6vw, 80px) 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: clamp(14px, 1.2vw, 16px);
+  font-weight: 500;
+  letter-spacing: -.02em;
+  grid-column: 1 / -1;
+  min-height: 200px;
+}
+.empty-state svg {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
 /* Header */
 .site-header {
   position: sticky;
@@ -1553,6 +1576,7 @@ main {
   font-weight: 600;
   letter-spacing: -.02em;
   transition: opacity .25s ease;
+  cursor: pointer;
 }
 
 .umkm-btn-wa:hover {
@@ -1573,6 +1597,7 @@ main {
   font-weight: 500;
   letter-spacing: -.02em;
   transition: border-color .25s ease;
+  cursor: pointer;
 }
 
 .umkm-btn-maps:hover {
@@ -1589,10 +1614,11 @@ main {
   letter-spacing: -.02em;
   text-decoration: underline;
   margin-top: 4px;
+  cursor: pointer;
 }
 
 .umkm-detail-about {
-  margin-top: var(--section-space);
+  margin-top: clamp(48px, 5vw, 80px);
 }
 
 .umkm-about-title {
@@ -1998,8 +2024,9 @@ main {
 
 .galeri-modal-image-wrap {
   width: 100%;
-  aspect-ratio: 16/10;
   background: #111;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 

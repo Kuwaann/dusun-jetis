@@ -1,3 +1,4 @@
+
 import { User } from "lucide-react";
 
 export default function Profil() {
@@ -5,24 +6,25 @@ export default function Profil() {
     <section className="section welcome reveal" id="profil">
       <div className="welcome-media">
         <div className="image-placeholder">
-          <User size={24} />
-          [Placeholder Foto Kepala Wilayah]
+          <User size={32} />
+          [Foto Kepala Wilayah]
         </div>
       </div>
 
       <div className="welcome-copy">
         <h2 className="welcome-title">
-          Sambutan dari Kepala Wilayah,<br />
-          Ibu Lorem Ipsum
+          Sambutan Kepala Wilayah,<br />
+          Dusun Jetis
         </h2>
         <p className="welcome-text">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam
-          in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consec,
-          ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue.
-          Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque
-          nibh nibh, at molestie ante fermentum at amet. Pellentesque commodo lacus et ultrices
-          nortor. Quisque sagittis est at diam condimentum, vel euismod erat placerat. In
-          iaculis arcu eros, eget tempor orci facilisis id.
+          Selamat datang di portal resmi Dusun Jetis, Desa Jamuskauman, Kecamatan Ngluwar, Kabupaten Magelang. Media informasi digital ini hadir sebagai wujud transparansi, keterbukaan informasi, serta sarana komunikasi interaktif antara pemerintah dusun dengan seluruh warga maupun masyarakat luas.
+        </p>
+        <p className="welcome-text" style={{ marginTop: '16px' }}>
+          Melalui optimalisasi potensi lokal di bidang pertanian, UMKM, serta keharmonisan sosial yang erat, kami berkomitmen untuk terus mewujudkan lingkungan dusun yang sejahtera, mandiri, dan berbudaya. Semoga kehadiran website ini memberikan manfaat nyata bagi kemajuan Dusun Jetis tercinta.
+        </p>
+        <p className="welcome-text" style={{ marginTop: '24px', fontWeight: '600', color: 'var(--black)' }}>
+          Salam hangat,<br />
+          Kepala Wilayah Dusun Jetis
         </p>
       </div>
     </section>

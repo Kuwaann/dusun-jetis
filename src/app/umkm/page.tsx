@@ -5,74 +5,37 @@ import Header from "@/components/Header";
 import UmkmHeader from "@/components/UmkmHeader";
 import UmkmGrid from "@/components/UmkmGrid";
 import Footer from "@/components/Footer";
+import { createClient } from "@/lib/supabase/client";
 
 export default function UmkmPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [allUmkmItems, setAllUmkmItems] = useState<any[]>([]);
+  const supabase = createClient();
 
-  const allUmkmItems = [
-    {
-      id: 1,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 2,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 3,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 4,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 5,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 6,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 7,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-    {
-      id: 8,
-      title: "Bakpau Pak Lorem Ipsum",
-      category: "Jajanan",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrice.",
-      href: "#",
-    },
-  ];
+  useEffect(() => {
+    async function fetchUmkm() {
+      const { data } = await supabase.from("umkm").select("*").order("created_at", { ascending: false });
+      if (data) {
+        // Map data to match UmkmGrid's expected properties
+        const mappedData = data.map(item => ({
+          id: item.id,
+          title: item.name,
+          category: item.category,
+          desc: item.description,
+          image_url: item.image_url,
+          href: `/umkm/${item.id}`,
+        }));
+        setAllUmkmItems(mappedData);
+      }
+    }
+    fetchUmkm();
+  }, []);
 
   const filteredItems = allUmkmItems.filter(
     (item) =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.desc.toLowerCase().includes(searchQuery.toLowerCase())
+      (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.desc || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
@@ -112,7 +75,7 @@ export default function UmkmPage() {
         />
 
         {/* 4x2 UMKM Grid */}
-        <UmkmGrid items={filteredItems} />
+        <UmkmGrid items={filteredItems} searchQuery={searchQuery} />
       </main>
       <Footer />
     </div>

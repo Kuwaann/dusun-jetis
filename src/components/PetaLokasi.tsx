@@ -12,7 +12,7 @@ export default function PetaLokasi() {
             </p>
           </div>
           <a
-            href="https://maps.google.com/?q=Dusun+Jetis,+Jamuskauman,+Ngluwar,+Magelang"
+            href="https://maps.app.goo.gl/G337hPx9dwJYwiY76"
             target="_blank"
             rel="noopener noreferrer"
             className="map-btn"
@@ -23,13 +23,13 @@ export default function PetaLokasi() {
           </a>
         </div>
 
-        <div className="map-canvas-container" style={{ flex: 1, padding: '0 4px 4px', display: 'flex' }}>
-          <div style={{ width: '100%', minHeight: '380px', borderRadius: 'calc(var(--radius) - 4px)', overflow: 'hidden', background: '#e5e5e5', position: 'relative' }}>
+        <div className="map-canvas-container" style={{ width: '100%', padding: '0 4px 4px' }}>
+          <div style={{ width: '100%', height: '420px', borderRadius: 'calc(var(--radius) - 4px)', overflow: 'hidden', background: '#1a1a1a' }}>
              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15822.463665492987!2d110.3013866!3d-7.6186847!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e7a8bb03b90558b%3A0xc39f2eb5fb146db7!2sJetis%2C%20Jamuskauman%2C%20Ngluwar%2C%20Magelang%20Regency%2C%20Central%20Java!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid" 
+                src="https://maps.google.com/maps?q=Jetis,+Jamuskauman,+Ngluwar,+Magelang&t=&z=15&ie=UTF8&iwloc=&output=embed" 
                 width="100%" 
                 height="100%" 
-                style={{ border: 0, position: 'absolute', top: 0, left: 0, filter: 'grayscale(100%) contrast(1.1) brightness(1.1)' }} 
+                style={{ border: 0, filter: 'grayscale(100%) invert(92%) contrast(83%) hue-rotate(180deg)' }} 
                 allowFullScreen={false} 
                 loading="lazy" 
                 referrerPolicy="no-referrer-when-downgrade"

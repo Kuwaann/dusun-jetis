@@ -1,48 +1,120 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { UploadCloud } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { uploadImage, deleteImage } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
 
 export default function EditGaleriPage() {
   const params = useParams();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   
-  // Simulasi data foto yang sudah ada
-  const [preview, setPreview] = useState<string | null>("https://images.unsplash.com/photo-1544365558-35aa4afcf11f?auto=format&fit=crop&q=80&w=800&h=500");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   
   const [formData, setFormData] = useState({
-    keterangan: "Gotong Royong Kebersihan Wilayah",
-    alt: "Kegiatan Gotong Royong Warga"
+    caption: "",
+    alt_text: "",
+    status: "",
+    image_url: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (params.id) {
+      fetchGaleri();
+    }
+  }, [params.id]);
+
+  const fetchGaleri = async () => {
+    setIsFetching(true);
+    const { data, error } = await supabase
+      .from("galeri")
+      .select("*")
+      .eq("id", params.id)
+      .single();
+
+    if (error || !data) {
+      console.error(error);
+      toast.error("Gagal memuat data foto galeri.");
+      router.push("/admin/dashboard/galeri");
+    } else {
+      setFormData({
+        caption: data.title || "",
+        alt_text: "",
+        status: "published",
+        image_url: data.image_url || "",
+      });
+      setPreview(data.image_url);
+    }
+    setIsFetching(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent, status: "published" | "draft" | null = null) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+
+    const finalStatus = status || formData.status;
+
+    try {
+      let finalImageUrl = formData.image_url;
+
+      // 1. Upload foto baru jika ada
+      if (imageFile) {
+        if (formData.image_url) {
+          await deleteImage(formData.image_url);
+        }
+        finalImageUrl = await uploadImage(imageFile, "galeri");
+      }
+
+      // 2. Update database
+      const { error } = await supabase
+        .from("galeri")
+        .update({
+          image_url: finalImageUrl,
+          title: formData.caption,
+        })
+        .eq("id", params.id);
+
+      if (error) throw error;
+
+      // 3. Log Aktivitas
+      await logActivity("galeri", "UPDATE", `Memperbarui foto galeri: ${formData.caption || params.id}`);
+
+      toast.success("Foto galeri berhasil diperbarui!");
+      router.push("/admin/dashboard/galeri");
+      router.refresh();
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Gagal memperbarui foto galeri: " + err.message);
+    } finally {
       setIsLoading(false);
-      alert(`Simulasi berhasil memperbarui foto galeri ID: ${params.id} (UI Preview).`);
-    }, 1000);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     } else {
+      setImageFile(null);
       setPreview(null);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
-  };
+
 
   return (
     <div>
@@ -58,7 +130,12 @@ export default function EditGaleriPage() {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="admin-panel-card" style={{ padding: "32px" }}>
+      {isFetching ? (
+        <div className="admin-panel-card" style={{ padding: "32px", textAlign: "center", color: "var(--muted)" }}>
+          Memuat data Galeri...
+        </div>
+      ) : (
+      <form onSubmit={(e) => handleSubmit(e)} className="admin-panel-card" style={{ padding: "32px" }}>
         <div className="admin-form-group">
           <label className="admin-label">Foto Saat Ini *</label>
           <div style={{ 
@@ -82,6 +159,7 @@ export default function EditGaleriPage() {
                   className="admin-btn-secondary" 
                   onClick={() => {
                     setPreview(null);
+                    setImageFile(null);
                     const fileInput = document.getElementById('foto') as HTMLInputElement;
                     if (fileInput) fileInput.value = '';
                   }}
@@ -120,8 +198,8 @@ export default function EditGaleriPage() {
             type="text" 
             id="keterangan" 
             className="admin-input" 
-            value={formData.keterangan}
-            onChange={handleChange}
+            value={formData.caption}
+            onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
             required 
           />
         </div>
@@ -132,8 +210,8 @@ export default function EditGaleriPage() {
             type="text" 
             id="alt" 
             className="admin-input" 
-            value={formData.alt}
-            onChange={handleChange}
+            value={formData.alt_text}
+            onChange={(e) => setFormData({ ...formData, alt_text: e.target.value })}
             required 
           />
           <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "8px" }}>
@@ -147,13 +225,16 @@ export default function EditGaleriPage() {
           </Link>
           <button 
             type="button" 
-            className="admin-btn-secondary" 
+            className="admin-btn-secondary"
+            onClick={(e) => handleSubmit(e, "draft")}
+            disabled={isLoading}
           >
             Ubah jadi Draf
           </button>
           <button 
             type="submit" 
             className="admin-btn-primary" 
+            onClick={(e) => handleSubmit(e, "published")}
             disabled={isLoading}
             style={{ opacity: isLoading ? 0.7 : 1 }}
           >
@@ -161,6 +242,7 @@ export default function EditGaleriPage() {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

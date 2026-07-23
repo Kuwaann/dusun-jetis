@@ -1,12 +1,89 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+interface Activity {
+  id: number;
+  action: string;
+  description: string;
+  waktu: string;
+  pengguna: string;
+}
+
 export default function DashboardPage() {
-  const recentActivities = [
-    { id: 1, action: "Menambahkan Berita Baru", title: "Kerja Bakti Minggu Pagi", date: "15 Juli 2026, 09:30", user: "Admin Utama" },
-    { id: 2, action: "Memperbarui Data UMKM", title: "Keripik Singkong Bu Tejo", date: "14 Juli 2026, 14:15", user: "Admin Utama" },
-    { id: 3, action: "Mengunggah Foto Galeri", title: "Kegiatan Posyandu", date: "12 Juli 2026, 10:05", user: "Admin Utama" },
-    { id: 4, action: "Menghapus Berita", title: "Pengumuman Jadwal Ronda (Lama)", date: "10 Juli 2026, 16:45", user: "Admin Utama" },
-  ];
+  const [stats, setStats] = useState({
+    umkm: 0,
+    berita: 0,
+    galeri: 0,
+    admin: 0,
+  });
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Fetch counts
+      const [umkmCount, beritaCount, galeriCount, profilesCount] = await Promise.all([
+        supabase.from("umkm").select("id", { count: "exact", head: true }),
+        supabase.from("berita").select("id", { count: "exact", head: true }),
+        supabase.from("galeri").select("id", { count: "exact", head: true }),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+      ]);
+
+      setStats({
+        umkm: umkmCount.count || 0,
+        berita: beritaCount.count || 0,
+        galeri: galeriCount.count || 0,
+        admin: profilesCount.count || 0,
+      });
+
+      // 2. Fetch latest 5 activity logs
+      const { data: logs, error: logsError } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (logsError) throw logsError;
+
+      // 3. Fetch profiles for user names
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name");
+
+      if (profilesError) throw profilesError;
+
+      const profileMap: Record<string, string> = {};
+      profiles?.forEach((p) => {
+        profileMap[p.id] = p.full_name;
+      });
+
+      const formattedActivities = (logs || []).map((log) => ({
+        id: log.id,
+        action: `${log.action} ${log.module}`,
+        description: log.description,
+        waktu: new Date(log.created_at).toLocaleString("id-ID", {
+          day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        }),
+        pengguna: profileMap[log.user_id] || "Sistem / User Terhapus",
+      }));
+
+      setRecentActivities(formattedActivities);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -20,19 +97,19 @@ export default function DashboardPage() {
       <div className="admin-stat-grid">
         <div className="admin-stat-card">
           <div className="admin-stat-title">Total UMKM</div>
-          <div className="admin-stat-value">24</div>
+          <div className="admin-stat-value">{isLoading ? "..." : stats.umkm}</div>
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-title">Total Berita</div>
-          <div className="admin-stat-value">128</div>
+          <div className="admin-stat-value">{isLoading ? "..." : stats.berita}</div>
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-title">Foto Galeri</div>
-          <div className="admin-stat-value">56</div>
+          <div className="admin-stat-value">{isLoading ? "..." : stats.galeri}</div>
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-title">Total Admin</div>
-          <div className="admin-stat-value">3</div>
+          <div className="admin-stat-value">{isLoading ? "..." : stats.admin}</div>
         </div>
       </div>
 
@@ -50,14 +127,24 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {recentActivities.map((activity) => (
-              <tr key={activity.id}>
-                <td style={{ fontWeight: 500 }}>{activity.action}</td>
-                <td>{activity.title}</td>
-                <td>{activity.date}</td>
-                <td>{activity.user}</td>
+            {isLoading ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: "24px", color: "var(--muted)" }}>Memuat aktivitas terbaru...</td>
               </tr>
-            ))}
+            ) : recentActivities.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: "24px", color: "var(--muted)" }}>Belum ada log aktivitas.</td>
+              </tr>
+            ) : (
+              recentActivities.map((activity) => (
+                <tr key={activity.id}>
+                  <td style={{ fontWeight: 500, textTransform: "capitalize" }}>{activity.action}</td>
+                  <td>{activity.description}</td>
+                  <td>{activity.waktu}</td>
+                  <td>{activity.pengguna}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

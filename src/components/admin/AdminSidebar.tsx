@@ -1,11 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Store, Newspaper, Image as ImageIcon, Users, Activity } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, Store, Newspaper, Image as ImageIcon, Users, Activity, LogOut } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Gagal melakukan logout.");
+    } else {
+      toast.success("Berhasil keluar.");
+      router.push("/admin/login");
+    }
+  };
 
   const menuItems = [
     { name: "Dasbor Utama", path: "/admin/dashboard", icon: Home },
@@ -39,6 +64,29 @@ export default function AdminSidebar() {
           );
         })}
       </nav>
+
+      <div style={{ marginTop: "auto", padding: "0 24px 24px" }}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="admin-nav-item" style={{ width: "100%", color: "#e65100" }}>
+              <LogOut size={20} strokeWidth={1.5} />
+              Keluar
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Keluar</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin keluar dari sesi admin? Anda harus masuk kembali untuk mengelola website.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout}>Ya, Keluar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </aside>
   );
 }

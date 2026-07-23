@@ -2,17 +2,71 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
 
 export default function CreateUmkmPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    owner: "",
+    category: "",
+    description: "",
+    whatsapp_number: "",
+    address: "",
+    maps_link: "",
+    linktree_link: "",
+  });
+  
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    
+    try {
+      const supabase = createClient();
+      let image_url = null;
+
+      // 1. Upload image if exists
+      if (imageFile) {
+        image_url = await uploadImage(imageFile, "umkm");
+      }
+
+      // 2. Insert to database
+      const { error } = await supabase
+        .from("umkm")
+        .insert({
+          name: formData.name,
+          owner: formData.owner,
+          category: formData.category,
+          description: formData.description,
+          whatsapp_number: formData.whatsapp_number,
+          address: formData.address,
+          maps_link: formData.maps_link,
+          linktree_link: formData.linktree_link,
+          image_url: image_url,
+        });
+
+      if (error) throw error;
+
+      // 3. Log Activity
+      await logActivity("umkm", "CREATE", `Menambahkan UMKM baru: ${formData.name}`);
+
+      toast.success("Data UMKM berhasil ditambahkan!");
+      router.push("/admin/dashboard/umkm");
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Gagal menambahkan UMKM: " + error.message);
+    } finally {
       setIsLoading(false);
-      alert("Simulasi berhasil menyimpan data UMKM (UI Preview).");
-    }, 1000);
+    }
   };
 
   return (
@@ -37,15 +91,42 @@ export default function CreateUmkmPage() {
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="nama">Nama UMKM *</label>
-            <input type="text" id="nama" className="admin-input" placeholder="Contoh: Keripik Bu Tejo" required />
+            <input 
+              type="text" 
+              id="nama" 
+              className="admin-input" 
+              placeholder="Contoh: Keripik Bu Tejo" 
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required 
+            />
+          </div>
+
+          <div className="admin-form-group">
+            <label className="admin-label" htmlFor="owner">Nama Pemilik *</label>
+            <input 
+              type="text" 
+              id="owner" 
+              className="admin-input" 
+              placeholder="Contoh: Bu Tejo" 
+              value={formData.owner}
+              onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+              required 
+            />
           </div>
 
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="kategori">Kategori *</label>
-            <select id="kategori" className="admin-input" required defaultValue="">
+            <select 
+              id="kategori" 
+              className="admin-input" 
+              required 
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            >
               <option value="" disabled>Pilih Kategori</option>
-              <option value="Makanan">Makanan & Minuman</option>
-              <option value="Kerajinan">Kerajinan Tangan</option>
+              <option value="Makanan & Minuman">Makanan & Minuman</option>
+              <option value="Kerajinan Tangan">Kerajinan Tangan</option>
               <option value="Jasa">Jasa</option>
               <option value="Lainnya">Lainnya</option>
             </select>
@@ -54,41 +135,84 @@ export default function CreateUmkmPage() {
 
         <div className="admin-form-group">
           <label className="admin-label" htmlFor="deskripsi">Deskripsi *</label>
-          <textarea id="deskripsi" className="admin-input admin-textarea" placeholder="Tuliskan deskripsi lengkap mengenai UMKM ini..." required></textarea>
+          <textarea 
+            id="deskripsi" 
+            className="admin-input admin-textarea" 
+            placeholder="Tuliskan deskripsi lengkap mengenai UMKM ini..." 
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            required
+          ></textarea>
         </div>
 
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="kontak">Kontak WhatsApp *</label>
-            <input type="text" id="kontak" className="admin-input" placeholder="Contoh: 081234567890" required />
+            <input 
+              type="text" 
+              id="kontak" 
+              className="admin-input" 
+              placeholder="Contoh: 081234567890" 
+              value={formData.whatsapp_number}
+              onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+              required 
+            />
+          </div>
+        </div>
+
+        <div className="admin-form-grid">
+          <div className="admin-form-group">
+            <label className="admin-label" htmlFor="alamat">Alamat / Lokasi *</label>
+            <input 
+              type="text" 
+              id="alamat" 
+              className="admin-input" 
+              placeholder="Contoh: RT 02 / RW 01 Dusun Jetis" 
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              required
+            />
           </div>
 
           <div className="admin-form-group">
-            <label className="admin-label" htmlFor="foto">Foto Utama</label>
-            <input type="file" id="foto" className="admin-input" accept="image/*" style={{ padding: "10px 16px" }} />
+            <label className="admin-label" htmlFor="maps_link">Link Google Maps (Opsional)</label>
+            <input 
+              type="url" 
+              id="maps_link" 
+              className="admin-input" 
+              placeholder="Contoh: https://maps.app.goo.gl/..." 
+              value={formData.maps_link}
+              onChange={(e) => setFormData({ ...formData, maps_link: e.target.value })}
+            />
           </div>
         </div>
 
         <div className="admin-form-group">
-          <label className="admin-label" htmlFor="alamat">Alamat / Lokasi</label>
-          <input type="text" id="alamat" className="admin-input" placeholder="Contoh: RT 02 / RW 01 Dusun Jetis" />
-        </div>
-
-        <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "40px 0 24px", paddingBottom: "16px", borderBottom: "1px solid var(--line)" }}>
-          Pengaturan SEO (Opsional)
-        </h2>
-        <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "20px", marginTop: "-12px" }}>
-          Atur informasi metadata agar halaman UMKM ini mudah ditemukan di Google.
-        </p>
-
-        <div className="admin-form-group">
-          <label className="admin-label" htmlFor="metaTitle">Meta Title</label>
-          <input type="text" id="metaTitle" className="admin-input" placeholder="Tulis judul unik untuk SEO (Maks 60 karakter)" />
+          <label className="admin-label" htmlFor="linktree_link">Link Linktree / Website Lain (Opsional)</label>
+          <input 
+            type="url" 
+            id="linktree_link" 
+            className="admin-input" 
+            placeholder="Contoh: https://linktr.ee/umkm_jetis" 
+            value={formData.linktree_link}
+            onChange={(e) => setFormData({ ...formData, linktree_link: e.target.value })}
+          />
         </div>
 
         <div className="admin-form-group">
-          <label className="admin-label" htmlFor="metaDesc">Meta Description</label>
-          <textarea id="metaDesc" className="admin-input" style={{ minHeight: "80px", resize: "vertical" }} placeholder="Tulis deskripsi singkat untuk SEO (Maks 160 karakter)"></textarea>
+          <label className="admin-label" htmlFor="foto">Foto Utama</label>
+          <input 
+            type="file" 
+            id="foto" 
+            className="admin-input" 
+            accept="image/*" 
+            style={{ padding: "10px 16px" }} 
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                setImageFile(e.target.files[0]);
+              }
+            }}
+          />
         </div>
 
         <div className="admin-form-actions">

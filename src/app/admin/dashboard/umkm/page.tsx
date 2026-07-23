@@ -1,18 +1,79 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { deleteImage } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
+
+interface Umkm {
+  id: number;
+  name: string;
+  category: string;
+  whatsapp_number: string;
+  image_url?: string;
+}
 
 export default function UmkmListPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedUmkm, setSelectedUmkm] = useState<number | null>(null);
+  const [selectedUmkm, setSelectedUmkm] = useState<Umkm | null>(null);
+  const [umkmList, setUmkmList] = useState<Umkm[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const dummyUmkm = [
-    { id: 1, nama: "Keripik Singkong Bu Tejo", kategori: "Makanan", kontak: "081234567890", status: "Aktif" },
-    { id: 2, nama: "Kerajinan Bambu Pak RT", kategori: "Kerajinan", kontak: "085678901234", status: "Aktif" },
-    { id: 3, nama: "Jamu Tradisional Mbah Joyo", kategori: "Minuman", kontak: "089012345678", status: "Aktif" },
-  ];
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchUmkm();
+  }, []);
+
+  const fetchUmkm = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("umkm")
+      .select("id, name, category, whatsapp_number, image_url")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setUmkmList(data);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedUmkm) return;
+    
+    setIsDeleting(true);
+    try {
+      // Hapus foto dari storage jika ada
+      if (selectedUmkm.image_url) {
+        await deleteImage(selectedUmkm.image_url);
+      }
+
+      // Hapus data dari tabel
+      const { error } = await supabase
+        .from("umkm")
+        .delete()
+        .eq("id", selectedUmkm.id);
+
+      if (error) throw error;
+
+      // Catat log
+      await logActivity("umkm", "DELETE", `Menghapus UMKM: ${selectedUmkm.name}`);
+      
+      // Refresh list
+      fetchUmkm();
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      console.error("Gagal menghapus UMKM:", err);
+      toast.error("Gagal menghapus UMKM.");
+    } finally {
+      setIsDeleting(false);
+      setSelectedUmkm(null);
+    }
+  };
 
   return (
     <div>
@@ -41,30 +102,40 @@ export default function UmkmListPage() {
             </tr>
           </thead>
           <tbody>
-            {dummyUmkm.map((umkm) => (
-              <tr key={umkm.id}>
-                <td style={{ fontWeight: 500 }}>{umkm.nama}</td>
-                <td>{umkm.kategori}</td>
-                <td>{umkm.kontak}</td>
-                <td>
-                  <span style={{ padding: "4px 8px", background: "#e8f5e9", color: "#2e7d32", borderRadius: "4px", fontSize: "12px", fontWeight: 500 }}>
-                    {umkm.status}
-                  </span>
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <Link href={`/admin/dashboard/umkm/${umkm.id}/edit`} className="admin-btn-edit">Edit</Link>
-                  <button 
-                    className="admin-btn-danger"
-                    onClick={() => {
-                      setSelectedUmkm(umkm.id);
-                      setIsDeleteModalOpen(true);
-                    }}
-                  >
-                    Hapus
-                  </button>
-                </td>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "32px" }}>Memuat data UMKM...</td>
               </tr>
-            ))}
+            ) : umkmList.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "var(--muted)" }}>Belum ada data UMKM.</td>
+              </tr>
+            ) : (
+              umkmList.map((umkm) => (
+                <tr key={umkm.id}>
+                  <td style={{ fontWeight: 500 }}>{umkm.name}</td>
+                  <td>{umkm.category}</td>
+                  <td>{umkm.whatsapp_number}</td>
+                  <td>
+                    <span style={{ padding: "4px 8px", background: "#e8f5e9", color: "#2e7d32", borderRadius: "4px", fontSize: "12px", fontWeight: 500 }}>
+                      Aktif
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <Link href={`/admin/dashboard/umkm/${umkm.id}/edit`} className="admin-btn-edit">Edit</Link>
+                    <button 
+                      className="admin-btn-danger"
+                      onClick={() => {
+                        setSelectedUmkm(umkm);
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -89,18 +160,17 @@ export default function UmkmListPage() {
               <button 
                 className="admin-btn-secondary"
                 onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
               >
                 Batal
               </button>
               <button 
                 className="admin-btn-danger"
-                style={{ padding: "10px 20px", fontSize: "13px" }}
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  alert(`Simulasi: UMKM dengan ID ${selectedUmkm} berhasil dihapus.`);
-                }}
+                style={{ padding: "10px 20px", fontSize: "13px", opacity: isDeleting ? 0.7 : 1 }}
+                onClick={handleDelete}
+                disabled={isDeleting}
               >
-                Ya, Hapus
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
               </button>
             </div>
           </div>

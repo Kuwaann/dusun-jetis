@@ -28,7 +28,7 @@ export default function ProfilInfoCards() {
             Dusun Jetis merupakan kawasan permukiman yang memiliki lingkungan asri dengan kehidupan masyarakat yang masih menjunjung tinggi nilai gotong royong, kekeluargaan, dan kebersamaan. Kehidupan sosial masyarakat berjalan dengan harmonis melalui berbagai kegiatan kemasyarakatan, keagamaan, maupun pembangunan lingkungan yang dilaksanakan secara bersama-sama.
           </p>
           <p>
-            Berdasarkan data administrasi Dusun Jetis per Januari 2025, jumlah penduduk mencapai 389 jiwa yang terdiri atas 203 laki-laki dan 186 perempuan, dengan total 129 Kepala Keluarga (KK). Persebaran penduduk tersebut tersebar di lima wilayah RT yang menjadi bagian dari Dusun Jetis.
+            Berdasarkan data administrasi Dusun Jetis, jumlah penduduk mencapai 245 jiwa yang terdiri atas 119 laki-laki dan 126 perempuan, dengan total 83 Kepala Keluarga (KK). Persebaran penduduk tersebut tersebar di dua wilayah RT (RT 05 dan RT 06).
           </p>
         </div>
       </article>
@@ -41,9 +41,6 @@ export default function ProfilInfoCards() {
         <div className="info-card-body">
           <p>
             Dusun Jetis memiliki potensi lokal yang didukung oleh kondisi geografis serta sumber daya masyarakat. Sebagian wilayah dusun dimanfaatkan sebagai area pertanian yang menjadi salah satu sumber mata pencaharian masyarakat. Selain itu, masyarakat Jetis juga memiliki semangat gotong royong yang kuat dalam mendukung berbagai kegiatan sosial, pembangunan, dan pelestarian lingkungan.
-          </p>
-          <p>
-            Di samping potensi sumber daya alam, Dusun Jetis juga memiliki potensi sejarah dan budaya. Keberadaan situs makam tua yang dipercaya berasal dari masa lampau serta cerita sejarah mengenai asal-usul Dusun Jetis menjadi bagian dari identitas budaya yang diwariskan secara turun-temurun oleh masyarakat.
           </p>
         </div>
       </article>

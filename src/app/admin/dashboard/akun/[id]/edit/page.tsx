@@ -1,34 +1,102 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
 
 export default function EditAkunPage() {
   const params = useParams();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
 
-  // Simulasi pre-fill data berdasarkan ID
   const [formData, setFormData] = useState({
-    nama: "Siti Rahmawati",
-    username: "siti_editor",
-    email: "siti@dusunjetis.id",
-    peran: "Editor",
-    status: "Aktif"
+    full_name: "",
+    email: "", // Assume we can't easily fetch email without API, but wait we need email to display. 
+    // Usually admin UI uses API to get user details. Let's just fetch profile for now, and leave email blank if we can't get it easily. 
+    // Actually, we can fetch email from an API route or just leave it blank for the user to fill in if they want to update it.
+    // Better: let's not update email for now to simplify, or require them to re-enter. Let's provide a field.
+    role: "editor",
+    password: "",
+    confirmPassword: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      alert(`Simulasi berhasil memperbarui data Akun ID: ${params.id} (UI Preview).`);
-    }, 1000);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (params.id) {
+      fetchProfile();
+    }
+  }, [params.id]);
+
+  const fetchProfile = async () => {
+    setIsFetching(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", params.id)
+      .single();
+
+    if (error || !data) {
+      console.error(error);
+      toast.error("Gagal memuat profil pengguna.");
+      router.push("/admin/dashboard/akun");
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        full_name: data.full_name || "",
+        role: data.role || "editor",
+        // Email tidak langsung tersedia di public profiles
+      }));
+    }
+    setIsFetching(false);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.password && formData.password !== formData.confirmPassword) {
+      toast.error("Kata sandi dan konfirmasi tidak cocok!");
+      return;
+    }
+
+    if (!formData.email) {
+      toast.error("Email harus diisi untuk mengupdate data auth.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/update-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: params.id,
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          role: formData.role,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Gagal memperbarui akun");
+      }
+
+      await logActivity("akun", "UPDATE", `Memperbarui akun: ${formData.full_name}`);
+
+      toast.success("Akun berhasil diperbarui!");
+      router.push("/admin/dashboard/akun");
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -45,6 +113,11 @@ export default function EditAkunPage() {
         </Link>
       </div>
 
+      {isFetching ? (
+        <div className="admin-panel-card" style={{ padding: "32px", textAlign: "center", color: "var(--muted)" }}>
+          Memuat data Akun...
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="admin-panel-card" style={{ padding: "32px", maxWidth: "800px" }}>
         <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid var(--line)" }}>
           Informasi Pribadi & Akses
@@ -53,36 +126,44 @@ export default function EditAkunPage() {
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="nama">Nama Lengkap *</label>
-            <input type="text" id="nama" className="admin-input" value={formData.nama} onChange={handleChange} required />
+            <input 
+              type="text" 
+              id="nama" 
+              className="admin-input" 
+              value={formData.full_name} 
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} 
+              required 
+            />
           </div>
 
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="peran">Peran Akses *</label>
-            <select id="peran" className="admin-input" value={formData.peran} onChange={handleChange} required>
-              <option value="Admin Utama">Admin Utama (Akses Penuh)</option>
-              <option value="Editor">Editor / Kontributor (Hanya Kelola Konten)</option>
+            <select 
+              id="peran" 
+              className="admin-input" 
+              value={formData.role} 
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })} 
+              required
+            >
+              <option value="admin">Admin Utama (Akses Penuh)</option>
+              <option value="editor">Editor / Kontributor (Hanya Kelola Konten)</option>
             </select>
           </div>
         </div>
 
         <div className="admin-form-grid">
           <div className="admin-form-group">
-            <label className="admin-label" htmlFor="email">Alamat Email *</label>
-            <input type="email" id="email" className="admin-input" value={formData.email} onChange={handleChange} required />
+            <label className="admin-label" htmlFor="email">Alamat Email Baru / Lama (Wajib) *</label>
+            <input 
+              type="email" 
+              id="email" 
+              className="admin-input" 
+              value={formData.email} 
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+              required 
+              placeholder="Masukkan email untuk memperbarui akun"
+            />
           </div>
-
-          <div className="admin-form-group">
-            <label className="admin-label" htmlFor="username">Username *</label>
-            <input type="text" id="username" className="admin-input" value={formData.username} onChange={handleChange} required />
-          </div>
-        </div>
-
-        <div className="admin-form-group">
-          <label className="admin-label" htmlFor="status">Status Akun *</label>
-          <select id="status" className="admin-input" value={formData.status} onChange={handleChange} required style={{ maxWidth: "388px" }}>
-            <option value="Aktif">Aktif (Dapat Login)</option>
-            <option value="Nonaktif">Nonaktif (Dilarang Login)</option>
-          </select>
         </div>
 
         <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "40px 0 24px", paddingBottom: "16px", borderBottom: "1px solid var(--line)" }}>
@@ -95,12 +176,26 @@ export default function EditAkunPage() {
         <div className="admin-form-grid">
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="password">Kata Sandi Baru</label>
-            <input type="password" id="password" className="admin-input" placeholder="Opsional (Minimal 8 karakter)" />
+            <input 
+              type="password" 
+              id="password" 
+              className="admin-input" 
+              placeholder="Opsional (Minimal 6 karakter)" 
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            />
           </div>
 
           <div className="admin-form-group">
             <label className="admin-label" htmlFor="confirmPassword">Konfirmasi Kata Sandi Baru</label>
-            <input type="password" id="confirmPassword" className="admin-input" placeholder="Opsional" />
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              className="admin-input" 
+              placeholder="Opsional" 
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+            />
           </div>
         </div>
 
@@ -118,6 +213,7 @@ export default function EditAkunPage() {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

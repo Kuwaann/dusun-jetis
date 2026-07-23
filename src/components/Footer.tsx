@@ -30,11 +30,11 @@ export default function Footer() {
             <div className="footer-contact-list">
               <div className="footer-contact-item">
                 <MapPin size={15} strokeWidth={1.8} style={{ flexShrink: 0, marginTop: "2px" }} />
-                <span>Dusun Jetis, Desa Jamuskauman, Kecamatan Ngluwar, Kab. Magelang, Jawa Tengah</span>
+                <span>973M+C29, Jamus Krajan, Jamuskauman, Kec. Ngluwar, Kab. Magelang, Jawa Tengah 56485</span>
               </div>
               <div className="footer-contact-item">
                 <Phone size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                <span>0812-XXXX-XXXX</span>
+                <span>+62 882 1670 9774</span>
               </div>
               <div className="footer-contact-item">
                 <Mail size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
@@ -42,7 +42,7 @@ export default function Footer() {
               </div>
               <div className="footer-contact-item">
                 <AtSign size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                <span>@dusunjetis</span>
+                <span>@brayatjetis</span>
               </div>
             </div>
           </div>

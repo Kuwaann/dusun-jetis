@@ -2,21 +2,21 @@ export default function DataRtDistribution() {
   const rtData = [
     {
       title: "RT 05",
-      kk: "78",
-      total: "96",
-      maleText: "Laki-Laki: 48 (50%)",
-      femaleText: "Perempuan: 48 (50%)",
-      malePercent: 50,
-      femalePercent: 50,
+      kk: "46",
+      total: "142",
+      maleText: "Laki-Laki: 66 (46.5%)",
+      femaleText: "Perempuan: 76 (53.5%)",
+      malePercent: 46.5,
+      femalePercent: 53.5,
     },
     {
       title: "RT 06",
-      kk: "78",
-      total: "96",
-      maleText: "Laki-Laki: 48 (50%)",
-      femaleText: "Perempuan: 48 (50%)",
-      malePercent: 50,
-      femalePercent: 50,
+      kk: "37",
+      total: "103",
+      maleText: "Laki-Laki: 53 (51.5%)",
+      femaleText: "Perempuan: 50 (48.5%)",
+      malePercent: 51.5,
+      femalePercent: 48.5,
     },
   ];
 

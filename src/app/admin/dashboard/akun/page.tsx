@@ -1,18 +1,90 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/supabase/logger";
+import { toast } from "sonner";
+
+interface Akun {
+  id: string;
+  full_name: string;
+  role: string;
+  users: {
+    email: string;
+  };
+}
 
 export default function AkunListPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedAkun, setSelectedAkun] = useState<number | null>(null);
+  const [selectedAkun, setSelectedAkun] = useState<Akun | null>(null);
+  const [akunList, setAkunList] = useState<Akun[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
 
-  const dummyAkun = [
-    { id: 1, nama: "Budi Santoso", username: "admin_budi", email: "budi@dusunjetis.id", peran: "Admin Utama", status: "Aktif" },
-    { id: 2, nama: "Siti Rahmawati", username: "siti_editor", email: "siti@dusunjetis.id", peran: "Editor/Kontributor", status: "Aktif" },
-    { id: 3, nama: "Agus Prakoso", username: "agus_staf", email: "agus@dusunjetis.id", peran: "Editor/Kontributor", status: "Nonaktif" },
-  ];
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchAkun();
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserEmail(data.user?.email || "");
+    });
+  }, []);
+
+  const fetchAkun = async () => {
+    setIsLoading(true);
+    // Kita mengambil dari tabel profiles dan melakukan relasi ke tabel auth.users
+    // Supabase JS tidak bisa langsung query auth.users, tapi kita bisa join dari profiles jika ada FK
+    // Namun `profiles` -> `auth.users` join tidak didukung secara default di data API tanpa setup RPC.
+    // Sebagai alternatif, kita ambil profiles, lalu untuk email, kita bisa menggunakan Edge Function,
+    // atau di proyek ini kita anggap email tidak ditampilkan secara real-time dari relasi, atau
+    // lebih baik kita ubah skema profiles agar menyimpan email juga untuk kemudahan baca.
+    // Wait, let's fetch profiles first.
+    
+    // Karena kita tidak bisa join ke auth.users langsung, saya akan fetch profiles saja, 
+    // jika butuh email, kita asumsikan kolom email belum ada di tabel profiles.
+    // Saya akan ambil profiles saja dulu.
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setAkunList(data as any);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedAkun) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedAkun.id }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Gagal menghapus akun");
+      }
+
+      await logActivity("akun", "DELETE", `Menghapus akun: ${selectedAkun.full_name}`);
+      
+      fetchAkun();
+      setIsDeleteModalOpen(false);
+    } catch (err: any) {
+      console.error("Gagal menghapus akun:", err);
+      toast.error(err.message);
+    } finally {
+      setIsDeleting(false);
+      setSelectedAkun(null);
+    }
+  };
 
   return (
     <div>
@@ -34,55 +106,62 @@ export default function AkunListPage() {
           <thead>
             <tr>
               <th>Nama Lengkap</th>
-              <th>Username</th>
-              <th>Email</th>
               <th>Peran</th>
+              <th>Status</th>
               <th>Status</th>
               <th style={{ width: "160px", textAlign: "right" }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {dummyAkun.map((akun) => (
-              <tr key={akun.id}>
-                <td style={{ fontWeight: 500 }}>{akun.nama}</td>
-                <td style={{ color: "var(--muted)", fontSize: "13px" }}>@{akun.username}</td>
-                <td>{akun.email}</td>
-                <td>
-                  <span style={{ 
-                    padding: "4px 8px", 
-                    background: akun.peran === "Admin Utama" ? "rgba(229,193,88,0.15)" : "var(--soft-white)", 
-                    color: akun.peran === "Admin Utama" ? "var(--gold)" : "var(--muted)", 
-                    borderRadius: "4px", fontSize: "12px", fontWeight: 600 
-                  }}>
-                    {akun.peran}
-                  </span>
-                </td>
-                <td>
-                  <span style={{ 
-                    padding: "4px 8px", 
-                    background: akun.status === "Aktif" ? "#e8f5e9" : "#ffebee", 
-                    color: akun.status === "Aktif" ? "#2e7d32" : "#c62828", 
-                    borderRadius: "4px", fontSize: "12px", fontWeight: 500 
-                  }}>
-                    {akun.status}
-                  </span>
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <Link href={`/admin/dashboard/akun/${akun.id}/edit`} className="admin-btn-edit">Edit</Link>
-                  <button 
-                    className="admin-btn-danger"
-                    onClick={() => {
-                      setSelectedAkun(akun.id);
-                      setIsDeleteModalOpen(true);
-                    }}
-                    disabled={akun.peran === "Admin Utama"}
-                    style={{ opacity: akun.peran === "Admin Utama" ? 0.3 : 1, cursor: akun.peran === "Admin Utama" ? "not-allowed" : "pointer" }}
-                  >
-                    Hapus
-                  </button>
-                </td>
+            {isLoading ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: "32px" }}>Memuat data Akun...</td>
               </tr>
-            ))}
+            ) : akunList.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: "32px", color: "var(--muted)" }}>Belum ada data Akun.</td>
+              </tr>
+            ) : (
+              akunList.map((akun) => (
+                <tr key={akun.id}>
+                  <td style={{ fontWeight: 500 }}>{akun.full_name}</td>
+                  <td>
+                    <span style={{ 
+                      padding: "4px 8px", 
+                      background: akun.role === "admin" ? "rgba(229,193,88,0.15)" : "var(--soft-white)", 
+                      color: akun.role === "admin" ? "var(--gold)" : "var(--muted)", 
+                      borderRadius: "4px", fontSize: "12px", fontWeight: 600 
+                    }}>
+                      {akun.role === "admin" ? "Admin Utama" : "Editor/Kontributor"}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ 
+                      padding: "4px 8px", 
+                      background: "#e8f5e9", 
+                      color: "#2e7d32", 
+                      borderRadius: "4px", fontSize: "12px", fontWeight: 500 
+                    }}>
+                      Aktif
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <Link href={`/admin/dashboard/akun/${akun.id}/edit`} className="admin-btn-edit">Edit</Link>
+                    <button 
+                      className="admin-btn-danger"
+                      onClick={() => {
+                        setSelectedAkun(akun);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      disabled={akun.role === "admin"}
+                      style={{ opacity: akun.role === "admin" ? 0.3 : 1, cursor: akun.role === "admin" ? "not-allowed" : "pointer" }}
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -107,18 +186,17 @@ export default function AkunListPage() {
               <button 
                 className="admin-btn-secondary"
                 onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
               >
                 Batal
               </button>
               <button 
                 className="admin-btn-danger"
-                style={{ padding: "10px 20px", fontSize: "13px" }}
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  alert(`Simulasi: Akun dengan ID ${selectedAkun} berhasil dihapus.`);
-                }}
+                style={{ padding: "10px 20px", fontSize: "13px", opacity: isDeleting ? 0.7 : 1 }}
+                onClick={handleDelete}
+                disabled={isDeleting}
               >
-                Ya, Hapus Akun
+                {isDeleting ? "Menghapus..." : "Ya, Hapus Akun"}
               </button>
             </div>
           </div>

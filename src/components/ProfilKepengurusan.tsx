@@ -3,8 +3,8 @@ import { User } from "lucide-react";
 export default function ProfilKepengurusan() {
   const pengurusList = [
     { name: "Lorem Ipsum", role: "Kepala Wilayah" },
-    { name: "Lorem Ipsum", role: "Sekretaris Dusun" },
-    { name: "Lorem Ipsum", role: "Bendahara Dusun" },
+    { name: "Lorem Ipsum", role: "Badan Permusyawaratan Desa" },
+    { name: "Lorem Ipsum", role: "Ketua RW 07" },
     { name: "Lorem Ipsum", role: "Ketua RT 05" },
     { name: "Lorem Ipsum", role: "Ketua RT 06" },
   ];

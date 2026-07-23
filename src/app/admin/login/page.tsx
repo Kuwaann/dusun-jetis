@@ -1,21 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     
-    // Simulate login for UI preview
-    setTimeout(() => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
       setIsLoading(false);
-      alert("Fungsi login sedang dalam tahap pengembangan (UI Preview).");
-    }, 1000);
+    } else {
+      // Refresh router to apply middleware redirects
+      router.refresh();
+    }
   };
 
   return (
@@ -25,6 +39,12 @@ export default function AdminLogin() {
           Jetis<span className="admin-brand-dot">.</span>
         </div>
         <h1 className="admin-login-title">Masuk ke Panel Admin</h1>
+
+        {error && (
+          <div style={{ padding: "10px", background: "#fef2f2", color: "#dc2626", borderRadius: "6px", fontSize: "14px", marginBottom: "16px", border: "1px solid #f87171" }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="admin-form-group">

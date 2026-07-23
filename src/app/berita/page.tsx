@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BeritaFeaturedCard from "@/components/BeritaFeaturedCard";
 import BeritaList from "@/components/BeritaList";
 import Footer from "@/components/Footer";
+import { Newspaper } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function BeritaPage() {
+  const [featuredNews, setFeaturedNews] = useState<any>(null);
+  const [otherNews, setOtherNews] = useState<any[]>([]);
+  const supabase = createClient();
+  
   useEffect(() => {
     // Scroll reveal observer
     const revealElements = document.querySelectorAll(".reveal");
@@ -26,11 +32,31 @@ export default function BeritaPage() {
       });
     }, observerOptions);
 
-    revealElements.forEach((el) => revealObserver.observe(el));
+    revealElements.forEach((el) => {
+      if (!el.classList.contains("visible")) {
+        revealObserver.observe(el);
+      }
+    });
 
     return () => {
       revealObserver.disconnect();
     };
+  }, [featuredNews]);
+
+  useEffect(() => {
+    async function fetchBerita() {
+      const { data } = await supabase
+        .from("berita")
+        .select("id, title, slug, excerpt, content, published_at, image_url")
+        .eq("status", "published")
+        .order("published_at", { ascending: false });
+
+      if (data && data.length > 0) {
+        setFeaturedNews(data[0]);
+        setOtherNews(data.slice(1));
+      }
+    }
+    fetchBerita();
   }, []);
 
   return (
@@ -45,11 +71,21 @@ export default function BeritaPage() {
           </p>
         </section>
 
-        {/* Hero Card Berita Utama */}
-        <BeritaFeaturedCard />
+        {/* Berita List or Empty State */}
+        {!featuredNews ? (
+          <div className="empty-state reveal" style={{ width: 'var(--container)', margin: '60px auto 0' }}>
+            <Newspaper />
+            <span>Belum ada berita yang dipublikasikan saat ini.</span>
+          </div>
+        ) : (
+          <>
+            {/* Hero Card Berita Utama */}
+            <BeritaFeaturedCard item={featuredNews} />
 
-        {/* Stack 5 Berita Horizontal */}
-        <BeritaList />
+            {/* Stack 5 Berita Horizontal */}
+            <BeritaList items={otherNews} />
+          </>
+        )}
       </main>
       <Footer />
     </div>
